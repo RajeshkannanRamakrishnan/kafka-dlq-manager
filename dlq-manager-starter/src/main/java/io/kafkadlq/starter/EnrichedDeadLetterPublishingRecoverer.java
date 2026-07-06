@@ -8,6 +8,7 @@ import java.util.function.BiFunction;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.header.Headers;
+import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.springframework.kafka.core.KafkaOperations;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
@@ -37,6 +38,7 @@ public class EnrichedDeadLetterPublishingRecoverer extends DeadLetterPublishingR
         super(template);
         this.applicationName = applicationName;
         this.consumerGroup = consumerGroup;
+        addHeadersFunction(this::buildEnrichedHeaders);
     }
 
     public EnrichedDeadLetterPublishingRecoverer(KafkaOperations<?, ?> template,
@@ -46,32 +48,31 @@ public class EnrichedDeadLetterPublishingRecoverer extends DeadLetterPublishingR
         super(template, destinationResolver);
         this.applicationName = applicationName;
         this.consumerGroup = consumerGroup;
+        addHeadersFunction(this::buildEnrichedHeaders);
     }
 
-    @Override
-    protected void maybeAddOriginalHeaders(Headers kafkaHeaders,
-                                           ConsumerRecord<?, ?> record,
-                                           Exception ex) {
-        super.maybeAddOriginalHeaders(kafkaHeaders, record, ex);
+    private Headers buildEnrichedHeaders(ConsumerRecord<?, ?> record, Exception ex) {
+        Headers headers = new RecordHeaders();
         Throwable cause = rootCause(ex);
 
-        put(kafkaHeaders, DlqHeaders.EXCEPTION_CLASS, cause.getClass().getName());
-        put(kafkaHeaders, DlqHeaders.EXCEPTION_MESSAGE, safe(cause.getMessage()));
-        put(kafkaHeaders, DlqHeaders.EXCEPTION_STACKTRACE, stackTraceOf(cause));
-        put(kafkaHeaders, DlqHeaders.ORIGINAL_TOPIC, record.topic());
-        put(kafkaHeaders, DlqHeaders.ORIGINAL_PARTITION, String.valueOf(record.partition()));
-        put(kafkaHeaders, DlqHeaders.ORIGINAL_OFFSET, String.valueOf(record.offset()));
-        put(kafkaHeaders, DlqHeaders.ORIGINAL_TIMESTAMP, String.valueOf(record.timestamp()));
-        put(kafkaHeaders, DlqHeaders.CONSUMER_GROUP, consumerGroup);
-        put(kafkaHeaders, DlqHeaders.APPLICATION, applicationName);
-        put(kafkaHeaders, DlqHeaders.FAILED_AT, String.valueOf(System.currentTimeMillis()));
+        put(headers, DlqHeaders.EXCEPTION_CLASS, cause.getClass().getName());
+        put(headers, DlqHeaders.EXCEPTION_MESSAGE, safe(cause.getMessage()));
+        put(headers, DlqHeaders.EXCEPTION_STACKTRACE, stackTraceOf(cause));
+        put(headers, DlqHeaders.ORIGINAL_TOPIC, record.topic());
+        put(headers, DlqHeaders.ORIGINAL_PARTITION, String.valueOf(record.partition()));
+        put(headers, DlqHeaders.ORIGINAL_OFFSET, String.valueOf(record.offset()));
+        put(headers, DlqHeaders.ORIGINAL_TIMESTAMP, String.valueOf(record.timestamp()));
+        put(headers, DlqHeaders.CONSUMER_GROUP, consumerGroup);
+        put(headers, DlqHeaders.APPLICATION, applicationName);
+        put(headers, DlqHeaders.FAILED_AT, String.valueOf(System.currentTimeMillis()));
 
-        byte[] attempts = lastValue(kafkaHeaders, KafkaHeaders.DELIVERY_ATTEMPT);
+        byte[] attempts = lastValue(record.headers(), KafkaHeaders.DELIVERY_ATTEMPT);
         if (attempts != null && attempts.length == 4) {
             int n = ((attempts[0] & 0xFF) << 24) | ((attempts[1] & 0xFF) << 16)
                     | ((attempts[2] & 0xFF) << 8) | (attempts[3] & 0xFF);
-            put(kafkaHeaders, DlqHeaders.DELIVERY_ATTEMPTS, String.valueOf(n));
+            put(headers, DlqHeaders.DELIVERY_ATTEMPTS, String.valueOf(n));
         }
+        return headers;
     }
 
     private static Throwable rootCause(Throwable t) {
