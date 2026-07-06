@@ -1,0 +1,32 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: dlq-manager-server
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+dlq-manager:
+  # The server does not consume application traffic; disable the starter's
+  # error-handler auto-configuration in this app.
+  auto-error-handler: false
+  server:
+    dlq-topic-patterns:
+      - ".*\\.DLT$"
+      - ".*-dlq$"
+      - ".*-dlt$"
+    dlq-suffixes:
+      - ".DLT"
+      - "-dlq"
+      - "-dlt"
+    max-page-size: 500
+    browse-poll-timeout-ms: 3000
+    default-replay-rate-per-second: 50
+    max-replay-batch-size: 10000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
