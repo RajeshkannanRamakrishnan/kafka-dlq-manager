@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kafka DLQ Manager</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Kafka DLQ Manager</h1>
+    <div id="status" class="status"></div>
+  </header>
+
+  <div class="layout">
+    <aside id="topics-panel">
+      <div class="panel-header">
+        <h2>DLQ Topics</h2>
+        <button id="refresh-topics" title="Refresh topics">&#8635;</button>
+      </div>
+      <ul id="topics-list"></ul>
+    </aside>
+
+    <main id="content">
+      <div id="empty-state" class="empty-state">Select a DLQ topic on the left to browse its dead letters.</div>
+
+      <div id="topic-view" hidden>
+        <div class="topic-header">
+          <h2 id="current-topic-name"></h2>
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="messages">Messages</button>
+            <button class="tab-btn" data-tab="failures">Failures</button>
+          </div>
+        </div>
+
+        <section id="messages-tab" class="tab-panel">
+          <div class="toolbar">
+            <label>Limit
+              <input id="messages-limit" type="number" value="50" min="1" max="500">
+            </label>
+            <button id="refresh-messages">Refresh</button>
+            <label class="select-all-label">
+              <input id="select-all" type="checkbox"> Select all
+            </label>
+            <button id="replay-selected" disabled>Replay selected (<span id="selected-count">0</span>)</button>
+          </div>
+          <div class="table-wrap">
+            <table id="messages-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Partition</th>
+                  <th>Offset</th>
+                  <th>Time</th>
+                  <th>Exception @ Origin</th>
+                  <th>Attempts</th>
+                  <th>Key</th>
+                  <th>Value</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="messages-tbody"></tbody>
+            </table>
+            <div id="messages-empty" class="empty-state" hidden>No messages found on this topic.</div>
+          </div>
+        </section>
+
+        <section id="failures-tab" class="tab-panel" hidden>
+          <div class="toolbar">
+            <label>Sample size
+              <input id="failures-sample-size" type="number" value="500" min="1" max="500">
+            </label>
+            <button id="refresh-failures">Refresh</button>
+          </div>
+          <div class="table-wrap">
+            <table id="failures-table">
+              <thead>
+                <tr><th>Exception @ Origin</th><th>Count</th><th></th></tr>
+              </thead>
+              <tbody id="failures-tbody"></tbody>
+            </table>
+            <div id="failures-empty" class="empty-state" hidden>No failures in the sampled window.</div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div id="replay-modal" class="modal-overlay" hidden>
+    <div class="modal">
+      <h2>Replay <span id="replay-modal-count"></span> message(s)</h2>
+      <label class="modal-field">
+        Target topic override (optional, auto-detected otherwise)
+        <input id="replay-target-topic" type="text" placeholder="auto-detect from x-dlq-original-topic">
+      </label>
+      <div id="replay-modal-body" class="modal-body"></div>
+      <div class="modal-actions">
+        <button id="replay-dry-run-btn">Preview (dry run)</button>
+        <button id="replay-confirm-btn" hidden>Confirm replay</button>
+        <button id="replay-cancel-btn" class="secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

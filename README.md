@@ -20,6 +20,10 @@ docker compose up --build
 
 This starts Kafka, a demo consumer that deliberately fails on ~30% of orders, and the DLQ manager. Within 30 seconds:
 
+Open **http://localhost:8090** for the web UI: browse dead letters per topic, group failures by exception, and replay selected messages with a dry-run preview before anything is actually produced.
+
+Prefer the terminal:
+
 ```bash
 # See the DLQ filling up
 curl localhost:8090/api/v1/topics
@@ -89,9 +93,16 @@ Read [docs/replay-semantics.md](docs/replay-semantics.md) for the full contract,
 
 Metrics at `/actuator/prometheus`.
 
+## Web UI
+
+`dlq-manager-server` serves a static single-page UI at `/` — no separate build step or Node toolchain, it ships inside the same Docker image. It covers:
+
+- **Browse** — pick a DLQ topic in the sidebar, see the newest messages with headers, diagnostics, and payload (expandable per row)
+- **Group** — a Failures tab groups messages by `exception @ origin → count`; clicking a group filters the Messages tab down to matching rows
+- **Replay** — select one or more messages and click Replay. The UI always runs a dry run first and shows the resolved target topic (or skip reason) per message; only after reviewing that can you confirm the real replay
+
 ## Roadmap
 
-- Web UI (browse, group, one-click replay with dry-run confirmation)
 - Avro/Protobuf deserialization via Schema Registry (pluggable SPI)
 - Explicit discard workflow with audit trail
 - Scheduled auto-replay with backoff
