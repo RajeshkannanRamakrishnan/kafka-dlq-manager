@@ -12,6 +12,14 @@
   <name>Kafka DLQ Manager</name>
   <description>Observe, diagnose, replay and resolve Kafka dead-letter queue messages</description>
 
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
   <modules>
     <module>dlq-manager-starter</module>
     <module>dlq-manager-server</module>
